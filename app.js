@@ -191,3 +191,23 @@ document.addEventListener('click',e=>{
  }
 });
 render();try{if(!localStorage.getItem('drawer-fit-guide'))$('#welcome').showModal();}catch{}
+
+// Screenshot sample import: prefilled data only; no image recognition service.
+document.body.insertAdjacentHTML('beforeend',`<dialog id="shot-import"><button class="close" aria-label="关闭截图导入">×</button><span class="eyebrow">截图导入 · 预置示例</span><h2>核对商品规格</h2><p class="small muted">使用已核对的商品截图与预填数据演示导入，不会自动识别其他图片。</p><div class="shot-review"><a href="screenshot-sample.jpg" target="_blank" rel="noopener"><img src="screenshot-sample.jpg" alt="三款收纳盒商品尺寸截图，点击查看原图"></a><div id="shot-rows"></div></div><div class="notice">大号图中的5cm、3.2cm是隔间标注，未作为外尺寸。请核对外部最大尺寸；单位cm。</div><label class="rotate-check"><input type="checkbox" id="shot-verified"> 我已核对外尺寸与单位</label><p class="small muted">导入会合并盒型：相同示例ID更新规格并保留数量，新盒型数量为0。导入后选择数量或使用最佳组合。</p><p id="shot-error" class="error" role="alert"></p><button id="shot-apply" class="primary wide">确认导入所选盒型</button></dialog>`);
+const shotSamples=[{id:'shot-lid',name:'台面带盖款',w:260,d:95,h:55},{id:'shot-large',name:'抽屉款·大号',w:260,d:172,h:57},{id:'shot-small',name:'基础款·小号',w:260,d:90,h:57}];
+const shotEntry=document.createElement('button');shotEntry.id='shot-open';shotEntry.className='primary wide';shotEntry.textContent='▧ 截图导入 · 试用预置示例';$('#catalog-import h2').after(shotEntry);
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.id==='shot-open'){
+  $('#catalog-import').close();$('#shot-verified').checked=false;$('#shot-error').textContent='';
+  $('#shot-rows').innerHTML=shotSamples.map((s,i)=>`<div class="shot-row"><label><input type="checkbox" data-shot-pick="${i}" checked> ${esc(s.name)}</label><div class="shot-dims">${[['w','长'],['d','宽'],['h','高']].map(([k,label])=>`<label>${label}<input aria-label="${esc(s.name)}外${label}" data-shot-row="${i}" data-shot-dim="${k}" type="number" min="1" max="300" step="0.1" value="${cm(s[k])}"></label>`).join('')}</div></div>`).join('');$('#shot-import').showModal();
+ }
+ if(b.id==='shot-apply')try{
+  if(!$('#shot-verified').checked)throw Error('请先核对外尺寸与单位并勾选确认');
+  const picks=[...document.querySelectorAll('[data-shot-pick]:checked')];if(!picks.length)throw Error('请至少选择一个盒型');
+  const rows=validateCatalog(picks.map(p=>{const i=Number(p.dataset.shotPick),s={...shotSamples[i],rotate:true};for(const input of document.querySelectorAll(`[data-shot-row="${i}"]`)){if(!input.checkValidity())throw Error('尺寸需为1–300cm，精确到0.1cm');s[input.dataset.shotDim]=mm(input.value);}return s;}));
+  const ids=new Set(catalog.map(s=>s.id));const next=validateCatalog([...catalog.map(s=>rows.find(r=>r.id===s.id)||s),...rows.filter(s=>!ids.has(s.id))]);
+  catalog=next;rows.forEach(s=>{state.quantities[s.id]??=0;});invalidateLayout();state.active='products';$('#shot-import').close();render();notify(`已导入${rows.length}种盒型，请选择数量`);
+ }catch(err){$('#shot-error').textContent=err.message;}
+});
+
