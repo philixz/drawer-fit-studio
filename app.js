@@ -73,7 +73,7 @@ function csvExport(){const d=drawer(),lines=[['类型',custom?'自定义建议':
 async function pngExport(){const source=$('#canvas svg');if(!source)return;const image=new Image(),url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(source)],{type:'image/svg+xml'}));try{await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1100;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,1400,1100);ctx.fillStyle='#26382d';ctx.font='bold 30px sans-serif';ctx.fillText('抽屉收纳尺寸方案'+(custom?' · 自定义建议':''),50,55);ctx.drawImage(image,50,80,1300,720);ctx.font='19px sans-serif';const lines=exportText().split('\n').filter((s,i)=>i<4||s.startsWith('边距')||s.startsWith('仅供'));if(result.unplaced.length)lines.push('待排入：'+result.unplaced.map(p=>`${p.id} ${dims(p)} ${reason(p)}`).join('；'));lines.forEach((s,i)=>ctx.fillText(s,50,825+i*33,1300));canvas.toBlob(b=>{if(b)download(b,'收纳布局图.png');},'image/png');$('#export-feedback').textContent='PNG 已生成';}catch{$('#export-feedback').textContent='图片导出失败，请重试或先导出CSV。';}finally{URL.revokeObjectURL(url);}}
 async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch{return false;}}
 document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.matches('.close')){b.closest('dialog').close();return;}
- if(b.dataset.panel){state.active=b.dataset.panel;renderSidebar();return;}
+ if(b.dataset.panel){state.active=state.active===b.dataset.panel?null:b.dataset.panel;renderSidebar();return;}
  if(b.dataset.qty){const id=b.dataset.qty;state.quantities[id]=Math.max(0,Math.min(50,Number(state.quantities[id])+Number(b.dataset.delta)));custom=null;original=null;combinationResult=null;render();return;}
  if(b.dataset.mode){mode=b.dataset.mode;$$('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));$('#rec-count').disabled=mode==='remaining';renderCandidates();return;}
  if(b.dataset.adopt!==undefined){adopt(Number(b.dataset.adopt));return;}
@@ -210,4 +210,5 @@ document.addEventListener('click',e=>{
   catalog=next;rows.forEach(s=>{state.quantities[s.id]??=0;});invalidateLayout();state.active='products';$('#shot-import').close();render();notify(`已导入${rows.length}种盒型，请选择数量`);
  }catch(err){$('#shot-error').textContent=err.message;}
 });
+
 
